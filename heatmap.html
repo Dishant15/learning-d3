@@ -10,7 +10,6 @@
 
 		.container {
 			width: 1200px;
-			height: 900px;
 			margin: 10px auto;
 			padding: 0px;
 		}
@@ -92,8 +91,8 @@
 		   		x.domain([data[0].year, data[data.length - 1].year + 1])
 		   		c.domain([d3.min(data, d => d.variance), d3.max(data, d => d.variance)])
 
-		   		var blockWidth = 5
-		   		var blockHeight = (height/12) //+ 4
+		   		var blockWidth = width / (data[data.length - 1].year - data[0].year)
+		   		var blockHeight = (height/12)
 
 		   		chart.selectAll("rect")
 		   				.data(data)
