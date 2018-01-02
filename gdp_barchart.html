@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>GDP Bar chart with D3</title>
+
+	<style type="text/css">
+		.container {
+			width: 800px;
+			height: 800px;
+			margin: 10px auto;
+			padding: 0px;
+		}
+
+		#chart {
+			background: steelblue;
+		}
+
+		h3 {
+			text-align: center;
+			color: steelblue;
+		}
+
+		rect,
+		rect.mouseout {
+			fill: white;
+		}
+
+		rect.mouseover {
+			fill: lightsteelblue;
+		}
+
+		#tooltip {
+			position: absolute;
+			background: white;
+			border: 1px solid grey;
+			color : steelblue;
+			opacity: 0;
+			padding: 10px;
+			text-align: left;
+			border-radius: 5px;
+		}
+
+		text {fill: white;}
+	</style>
+</head>
+<body>
+
+<div class='container'>
+	<h3>GDP Chart with D3</h3>
+	<svg id='chart'> </svg>
+	<div id="tooltip">
+		Amount : <span id="amount"></span><br/>
+		Time : <span id="time"></span>
+	</div>
+</div>
+
+<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+
+		var url = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/GDP-data.json';
+
+		var tooltip = d3.select('#tooltip')
+		var amount = d3.select('#amount')
+		var time = d3.select('#time')
+
+		var margin = {top : 30, bottom: 30, right: 30, left: 50},
+			   width = 800 - margin.left - margin.right,
+			   height = 500 - margin.top - margin.bottom;
+			   
+	    var chart = d3.select("#chart")
+	      	.attr("width", width + margin.left + margin.right)
+	      	.attr("height", height + margin.top + margin.bottom)
+	      .append("g")
+	         .attr("transform", `translate(${margin.left}, ${margin.top})`)
+
+	    var x = d3.scaleTime()
+	    			.range([0, width])
+
+	    var y = d3.scaleLinear()
+	    			.range([height, 0])
+
+	    var time_format = d3.timeFormat("%Y - %B")
+		
+		$.getJSON(url)
+			.done((res) => {
+		   		
+		   		var data = res.data;
+		   		var barWidth = Math.ceil(width / data.length);
+
+			    // setup scales
+			    x.domain([ new Date(data[0][0]), new Date(data[data.length-1][0]) ])
+			    y.domain([0, d3.max(data, d => d[1])])
+
+			    chart.selectAll(".bar")
+			    		.data(data)
+			    	.enter().append("rect")
+			    		.attr("class", "bar")
+			    		.attr("x", d => x(new Date(d[0])) )
+			    		.attr("y", d => y(d[1]) )
+			    		.attr("width", barWidth)
+			    		.attr("height", d => (height - y(d[1])))
+			    		.on("mouseover", function(d) {
+			    			var rect = d3.select(this)
+			    			rect.attr("class", "mouseover")
+
+			    			tooltip.transition()
+			    					.duration(200)
+			    					.style("opacity", .9);
+			    			tooltip.style("left", (d3.event.pageX + 5) + "px")
+	     							.style("top", (d3.event.pageY - 58) + "px")
+
+			    			amount.text(d[1])
+			    			time.text(time_format(new Date(d[0])))
+			    		})
+			    		.on("mouseout", function(d) {
+			    			var rect = d3.select(this)
+			    			rect.attr("class", "mouseout")
+
+			    			tooltip.transition()
+			    					.duration(200)
+			    					.style("opacity", 0)
+			    		})
+
+			   	chart.append("g")
+			   		.attr("transform", `translate(0, ${height})`)
+			   		.call(d3.axisBottom(x))
+
+			   	chart.append("g")
+			   		.call(d3.axisLeft(y))
+			   		.append("text")
+				      .attr("transform", "rotate(-90)")
+				      .attr("y", 6)
+				      .attr("dy", "0.8em")
+				      .style("text-anchor", "end")
+				      .text("Gross Domestic Product, USA");
+			})
+	})
+</script>
+</body>
+</html>

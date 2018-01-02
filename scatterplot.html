@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>D3 Scatter Plot Visualization</title>
+
+	<style type="text/css">
+		.container {
+			width: 800px;
+			height: 800px;
+			margin: 10px auto;
+			padding: 0px;
+		}
+
+		#chart {
+			background: steelblue;
+		}
+
+		h3 {
+			text-align: center;
+			color: steelblue;
+		}
+
+		circle {
+			stroke: rgb(204, 204, 204);
+			stroke-width: 1;
+			cursor: pointer;
+		}
+
+		circle:hover {
+			stroke: black;
+		}
+
+		#tooltip {
+			position: absolute;
+			background: white;
+			border: 1px solid grey;
+			color : steelblue;
+			opacity: 0;
+			padding: 10px;
+			text-align: center;
+			border-radius: 5px;
+		}
+
+		text.labels {
+			font-size: 10px;
+		}
+
+		text {fill: white;}
+	</style>
+</head>
+<body>
+
+<div class='container'>
+	<h3>Doping in Professional Bicycle Racing</h3>
+	<svg id='chart'> </svg>
+	<div id="tooltip">
+		<b id="name"></b> : <i id="country"></i><br/>
+		<span id="year"></span> , <span id="time"></span><br/>
+		<span id="doping"></span>
+	</div>
+</div>
+
+<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+
+		var url = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/cyclist-data.json';
+
+		var margin = {top : 30, bottom: 30, right: 100, left: 50},
+			   width = 800 - margin.left - margin.right,
+			   height = 500 - margin.top - margin.bottom;
+			   
+	    var chart = d3.select("#chart")
+	      	.attr("width", width + margin.left + margin.right)
+	      	.attr("height", height + margin.top + margin.bottom)
+	      .append("g")
+	         .attr("transform", `translate(${margin.left}, ${margin.top})`)
+
+	    var x = d3.scaleTime()
+	    			.range([0, width])
+
+	    var y = d3.scaleLinear()
+	    			.range([0, height])
+
+	    // tooltip dom selection
+	    var tooltip = d3.select('#tooltip')
+	    var tp_name = d3.select("#name")
+	    var tp_country = d3.select("#country")
+	    var tp_year = d3.select("#year")
+	    var tp_time = d3.select("#time")
+	    var tp_doping = d3.select("#doping")
+		
+		$.getJSON(url)
+			.done((data) => {
+				// adjust domain for labels with imperical 20 and 1 for x and y
+		   		x.domain([d3.max(data, d => d.Seconds) + 20 , d3.min(data, d => d.Seconds)])
+		   		y.domain([d3.min(data, d => d.Place), d3.max(data, d => d.Place) + 1])
+
+		   		chart.selectAll("circle")
+		   			.data(data)
+		   			.enter().append("circle")
+		   			.attr("r", 5)
+		   			.attr("cx", d => x(d.Seconds))
+		   			.attr("cy", d => y(d.Place))
+		   			.attr("fill", d => d.Doping == "" ? "#333" : "#f44")
+		   			.on("mouseover", function(d) {
+		   				// show tooltip
+		   				tooltip.transition()
+		   					.delay(200)
+		   					.style("opacity", .9)
+
+		   				tooltip.style("left", (d3.event.pageX + 10) + "px")
+	     					.style("top", (d3.event.pageY + 18) + "px")
+
+		   				tp_name.text(d.Name)
+		   				tp_country.text(d.Nationality)
+		   				tp_year.text(d.Year)
+		   				tp_time.text(d.Time)
+		   				tp_doping.text(d.Doping)
+		   			})
+		   			.on("mouseout", function(d) {
+		   				tooltip.transition()
+		   					.delay(200)
+		   					.style("opacity", 0)
+		   			})
+
+		   		chart.selectAll("text")
+		   			.data(data)
+		   			.enter().append("text")
+		   			.attr("class", "labels")
+		   			.attr("x", d => x(d.Seconds))
+		   			.attr("y", d => y(d.Place))
+		   			.text(d => d.Name)
+		   			.attr("transform", "translate(10, 5)")
+
+		   		chart.append("g")
+		   			.attr("transform", `translate(0, ${height})`)
+		   			.call(d3.axisBottom(x))
+		   			.append("text")
+					.attr("x", width)
+					.attr("y", -10)
+					.attr("dy", ".35em")
+					.style("text-anchor", "middle")
+					.text("Seconds");;
+
+		   		chart.append("g")
+		   			.call(d3.axisLeft(y))
+		   			.append("text")
+					  .attr("x", 0)
+					  .attr("y", 15)
+					  .attr("dy", ".35em")
+					  .style("text-anchor", "end")
+					  .attr("transform", "rotate(-90)")
+					  .text("Ranking");
+
+				// legend
+				var legend_doping = chart.append("g")
+										.attr("class", "legend")
+
+				legend_doping.append("circle")
+					.attr("r", 5)
+					.attr("cx" , width - 140)
+					.attr("cy", height - 100)
+					.attr("fill", "#f44")
+
+				legend_doping.append("text")
+					.attr("x", width - 120)
+					.attr("y", height - 95)
+					.text("Riders with doping allegations")
+
+				var legend_no_doping = chart.append("g")
+											.attr("class", "legend")
+
+				legend_no_doping.append("circle")
+					.attr("r", 5)
+					.attr("cx" , width - 140)
+					.attr("cy", height - 80)
+					.attr("fill", "#333")
+
+				legend_no_doping.append("text")
+					.attr("x", width - 120)
+					.attr("y", height - 75)
+					.text("No doping allegations")
+
+			})
+	})
+</script>
+</body>
+</html>

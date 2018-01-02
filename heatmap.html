@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Heatmap with D3</title>
+
+	<style type="text/css">
+		body {
+			background: steelblue;
+		}
+
+		.container {
+			width: 1200px;
+			height: 900px;
+			margin: 10px auto;
+			padding: 0px;
+		}
+
+		#chart {
+			background: white;
+		}
+
+		h3 {
+			text-align: center;
+			color: white;
+		}
+
+		#tooltip {
+			position: absolute;
+			background: white;
+			border: 1px solid grey;
+			color : steelblue;
+			opacity: 0;
+			padding: 10px;
+			text-align: left;
+			border-radius: 5px;
+		}
+
+		text {fill: black}
+	</style>
+</head>
+<body>
+
+<div class='container'>
+	<h3>Monthly Global Land-Surface Temperature</h3>
+	<svg id='chart'> </svg>
+	<div id="tooltip">
+	</div>
+</div>
+
+<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+
+		var url = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/global-temperature.json';
+
+		var tooltip = d3.select('#tooltip')
+
+		var margin = {top : 30, bottom: 30, right: 30, left: 50},
+			   width = 1200 - margin.left - margin.right,
+			   height = 600 - margin.top - margin.bottom;
+			   
+	    var chart = d3.select("#chart")
+	      	.attr("width", width + margin.left + margin.right)
+	      	.attr("height", height + margin.top + margin.bottom)
+	      .append("g")
+	         .attr("transform", `translate(${margin.left}, ${margin.top})`)
+
+	    // configure scales
+	    var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+	    var colors = ["#5e4fa2", "#3288bd", "#66c2a5", "#abdda4", "#e6f598", "#ffffbf", "#fee08b", "#fdae61", "#f46d43", "#d53e4f", "#9e0142"];
+	    var y_axis = d3.scaleQuantize()
+			    .domain([height, 0])
+			    .range(months);
+
+		var y = d3.scaleLinear().range([height, 0]).domain([1,13])
+
+		var x = d3.scaleLinear()
+					.range([0, width])
+
+		// color scale
+		var c = d3.scaleQuantize()
+					.range(colors)
+
+		
+		$.getJSON(url)
+			.done((res) => {
+
+		   		var base_temp = res.baseTemperature
+		   		var data = res.monthlyVariance
+
+		   		x.domain([data[0].year, data[data.length - 1].year + 1])
+		   		c.domain([d3.min(data, d => d.variance), d3.max(data, d => d.variance)])
+
+		   		var blockWidth = 5
+		   		var blockHeight = (height/12) //+ 4
+
+		   		chart.selectAll("rect")
+		   				.data(data)
+		   				.enter().append("rect")
+		   				.attr("x", d => x(d.year))
+		   				.attr("y", d => y(d.month) - (blockHeight) )
+		   				.attr("width", blockWidth)
+		   				.attr("height", blockHeight)
+		   				.attr("fill", d => c(d.variance))
+
+		   		chart.append("g")
+		   			.attr("transform", `translate(0, ${height})`)
+		   			.call(d3.axisBottom(x))
+
+		   		chart.append("g")
+		   			.call(d3.axisLeft(y))
+			})
+	})
+</script>
+</body>
+</html>
