@@ -18,7 +18,11 @@
 			background: white;
 		}
 
-		h3 {
+		rect {
+			cursor: pointer;
+		}
+
+		h3, h2 {
 			text-align: center;
 			color: white;
 		}
@@ -30,8 +34,23 @@
 			color : steelblue;
 			opacity: 0;
 			padding: 10px;
-			text-align: left;
+			text-align: center;
 			border-radius: 5px;
+		}
+
+		.legend-txt {
+			fill: grey;
+			font-size: 0.85em;
+		}
+
+		.months {
+			text-anchor: end;
+			font-size: 0.85em;
+		}
+
+		.axis-labels {
+			font-weight: bold;
+			font-size: 1.2em;
 		}
 
 		text {fill: black}
@@ -41,8 +60,12 @@
 
 <div class='container'>
 	<h3>Monthly Global Land-Surface Temperature</h3>
+	<h2>1753 - 2015</h2>
 	<svg id='chart'> </svg>
 	<div id="tooltip">
+		<span id="year"></span> - <span id="month"></span><br/>
+		Temperature : <b id="temp"></b><br/>
+		Variance : <b id="variance"></b>
 	</div>
 </div>
 
@@ -54,8 +77,12 @@
 		var url = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/global-temperature.json';
 
 		var tooltip = d3.select('#tooltip')
+		var tp_year = d3.select('#year')
+		var tp_month = d3.select('#month')
+		var tp_temp = d3.select('#temp')
+		var tp_variance = d3.select('#variance')
 
-		var margin = {top : 30, bottom: 30, right: 30, left: 50},
+		var margin = {top : 30, bottom: 130, right: 30, left: 120},
 			   width = 1200 - margin.left - margin.right,
 			   height = 600 - margin.top - margin.bottom;
 			   
@@ -68,9 +95,13 @@
 	    // configure scales
 	    var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 	    var colors = ["#5e4fa2", "#3288bd", "#66c2a5", "#abdda4", "#e6f598", "#ffffbf", "#fee08b", "#fdae61", "#f46d43", "#d53e4f", "#9e0142"];
-	    var y_axis = d3.scaleQuantize()
-			    .domain([height, 0])
-			    .range(months);
+	    
+	    var x_axis = d3.scaleTime()
+	    			.range([0, width])
+
+	    var get_month = d3.scaleQuantize()
+	    					.range(months)
+	    					.domain([1, 12])
 
 		var y = d3.scaleLinear().range([height, 0]).domain([1,13])
 
@@ -78,7 +109,7 @@
 					.range([0, width])
 
 		// color scale
-		var c = d3.scaleQuantize()
+		var c = d3.scaleQuantile()
 					.range(colors)
 
 		
@@ -89,10 +120,13 @@
 		   		var data = res.monthlyVariance
 
 		   		x.domain([data[0].year, data[data.length - 1].year + 1])
-		   		c.domain([d3.min(data, d => d.variance), d3.max(data, d => d.variance)])
+		   		c.domain([d3.min(data, d => base_temp + d.variance), d3.max(data, d => base_temp + d.variance)])
+		   		x_axis.domain([new Date(data[0].year , 0) , new Date(data[data.length-1].year, 0) ])
 
 		   		var blockWidth = width / (data[data.length - 1].year - data[0].year)
 		   		var blockHeight = (height/12)
+
+		   		var format_2p = d3.format(".2f")
 
 		   		chart.selectAll("rect")
 		   				.data(data)
@@ -101,14 +135,79 @@
 		   				.attr("y", d => y(d.month) - (blockHeight) )
 		   				.attr("width", blockWidth)
 		   				.attr("height", blockHeight)
-		   				.attr("fill", d => c(d.variance))
+		   				.attr("fill", d => c(base_temp + d.variance))
+		   				.on("mouseover", function(d) {
+		   					// show tooltip
+		   					tooltip.transition()
+		   						.delay(200)
+		   						.style("opacity", .9)
+
+		   					tooltip.style("left", (d3.event.pageX + 10) + "px")
+	     						.style("top", (d3.event.pageY + 18) + "px")
+
+	     					tp_year.text(d.year)
+	     					tp_month.text(get_month(d.month))
+	     					tp_variance.text(format_2p(d.variance))
+	     					tp_temp.text(format_2p(base_temp + d.variance))
+		   				})
+		   				.on("mouseout", function(d) {
+		   					// hide tooltip
+		   					tooltip.transition().delay(200)
+		   							.style("opacity", 0)
+		   				})
 
 		   		chart.append("g")
 		   			.attr("transform", `translate(0, ${height})`)
-		   			.call(d3.axisBottom(x))
+		   			.call(d3.axisBottom(x_axis))
 
 		   		chart.append("g")
-		   			.call(d3.axisLeft(y))
+		   			.append("text")
+		   			.attr("class", "axis-label")
+		   			.attr("text-anchor", "middle")
+		   			.attr("transform", `translate(${width/2}, ${height + 50})`)
+		   			.text("Years")
+
+		   		// create y axis manually
+		   		chart.selectAll(".months")
+		   			.data(months)
+		   			.enter().append("text")
+		   			.attr("class", "months")
+		   			.attr("x", -8)
+		   			.attr("y", (d, i) => i * blockHeight)
+		   			.attr("transform", `translate(0, ${blockHeight/2})`)
+		   			.text(d => d)
+
+		   		chart.append("g")
+		   			.attr("transform", `translate(${-70}, ${height/2})`)
+		   			.append("text")
+		   			.attr("class", "axis-label")		   			
+		   			.attr("text-anchor", "middle")
+		   			.attr("transform", "rotate(-90)")
+		   			.text("Months")
+
+		   		var legend_data = [0].concat(c.quantiles())
+
+		   		var legend_rect_width = 40;
+		   		var legend_start_x = width - 450;
+		   		var legend_start_y = height + 50;
+		   		// create legend
+		   		chart.selectAll(".lengend").data(legend_data)
+		   			.enter().append("rect")
+		   			.attr("class", "legend")
+		   			.attr("x", (d, i) => legend_start_x + (i * legend_rect_width))
+		   			.attr("y", legend_start_y)
+		   			.attr("width", legend_rect_width)
+		   			.attr("height", blockHeight/2)
+		   			.attr("fill", (d,i) => colors[i] )
+
+		   		var format = d3.format(".1f")
+
+		   		chart.selectAll(".legend-txt").data(legend_data)
+		   			.enter().append("text")
+		   			.attr("class", "legend-txt")
+		   			.attr("y", legend_start_y + blockHeight)
+		   			.attr("x", (d, i) => legend_start_x + (i * legend_rect_width))
+		   			.text(d => format(d))
 			})
 	})
 </script>
