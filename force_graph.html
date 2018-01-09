@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Force Graph with D3</title>
+
+	<style type="text/css">
+		.container {
+			width: 800px;
+			margin: 10px auto;
+			padding: 0px;
+		}
+
+		#chart {
+			background: steelblue;
+		}
+
+		h3 {
+			text-align: center;
+			color: steelblue;
+		}
+
+		rect,
+		rect.mouseout {
+			fill: white;
+		}
+
+		rect.mouseover {
+			fill: lightsteelblue;
+		}
+
+		#tooltip {
+			position: absolute;
+			background: white;
+			border: 1px solid grey;
+			color : steelblue;
+			opacity: 0;
+			padding: 10px;
+			text-align: left;
+			border-radius: 5px;
+		}
+
+		text {fill: white;}
+	</style>
+	<link href="flags/flags.css" rel=stylesheet type="text/css">
+</head>
+<body>
+
+<div class='container'>
+	<h3>Country Borders <img src="flags/blank.gif" class="flag flag-cz" alt="Czech Republic" /></h3>
+	<svg id='chart'> </svg>
+	<div id="tooltip">
+	</div>
+</div>
+
+<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+
+		var url = 'https://raw.githubusercontent.com/DealPete/forceDirected/master/countries.json';
+
+		var tooltip = d3.select('#tooltip')
+
+		var width = 900,
+			   height = 800;
+			   
+	    var svg = d3.select("#chart")
+	      	.attr("width", width)
+	      	.attr("height", height)
+
+	    var force = d3.forceSimulation() 
+            .force("charge", d3.forceCollide().strength(1))
+            .force("gravity", d3.forceManyBody().strength(-300).distanceMin(10).distanceMax(100))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("y", d3.forceY(0.001))
+            .force("x", d3.forceX(0.001))
+
+		
+		$.getJSON(url)
+			.done((data) => {
+		   		var nodes = data.nodes,
+		   			links = data.links;
+		   		
+		   		force.nodes(nodes)
+
+		   		var node = svg.selectAll(".node")
+		   			.data(nodes)
+		   			.enter().append("g")
+		   			.attr("class", "node")
+
+		   		node.append('circle')
+		   			.attr("r", 10)
+		   			.attr("fill", "white")
+
+		   		force.on("tick", function() {
+		   			console.log("tick")
+		   			node.attr("transform", d => `translate(${d.x}, ${d.y})`)
+		   		})
+
+		   		
+			})
+	})
+</script>
+</body>
+</html>
