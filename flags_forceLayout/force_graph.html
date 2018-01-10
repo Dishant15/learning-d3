@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Force Graph with D3</title>
+
+	<style type="text/css">
+		body {
+			background: steelblue;
+		}
+
+		.container {
+			width: 900px;
+			margin: 10px auto;
+			padding: 0px;
+		}
+
+		#chart {
+			background: black;
+		}
+
+		#graph {
+			position: absolute;
+		}
+
+		h3 {
+			text-align: center;
+			color: white;
+		}
+
+		.flag {
+			cursor: pointer;
+			position: absolute;
+		}
+
+		#tooltip {
+			position: absolute;
+			background: white;
+			border: 1px solid grey;
+			color : steelblue;
+			opacity: 0;
+			padding: 10px;
+			text-align: left;
+			border-radius: 5px;
+		}
+	</style>
+	<link href="flags.css" rel=stylesheet type="text/css">
+</head>
+<body>
+
+<div class='container'>
+	<h3>Country Borders</h3>
+	<div id="graph">
+		<svg id='chart'> </svg>
+		<div id="flagholder"></div>
+	</div>
+	<div id="tooltip">
+	</div>
+</div>
+
+<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+
+		var url = 'https://raw.githubusercontent.com/DealPete/forceDirected/master/countries.json';
+
+		var tooltip = d3.select('#tooltip')
+
+		var width = 900,
+			   height = 800;
+
+		var graph = d3.select("#graph")
+						.attr("width", width)
+						.attr("height", height)
+			   
+	    var svg = d3.select("#chart")
+	      	.attr("width", width)
+	      	.attr("height", height)
+
+	    var force = d3.forceSimulation() 
+	    	.force("link", d3.forceLink())
+	    	.force("center", d3.forceCenter(width / 2, height / 2))
+            .force("solid", d3.forceCollide(20).iterations(16))
+            .force("darkenergy", d3.forceManyBody().strength(-100))
+            .force("x", d3.forceX(0.01))
+            .force("y", d3.forceY(0.01))
+
+		
+		$.getJSON(url)
+			.done((data) => {
+		   		var nodes = data.nodes,
+		   			links = data.links;
+		   		
+		   		force.nodes(nodes)
+		   		force.force("link").links(links)
+
+		   		var node = graph.select("#flagholder").selectAll(".flag")
+		   			.data(nodes)
+		   			.enter().append('div')
+		   				.attr("class", d => `flag flag-${d.code}` )
+		   				.call(d3.drag()
+							.on("start", dragstarted)
+							.on("drag", dragged)
+							.on("end", dragended))
+		   				.on("mouseover", function(d) {
+
+		   					tooltip.transition()
+		   						.delay(200)
+		   						.style("opacity", .9)
+
+		   					tooltip.style("left", (d3.event.pageX + 10) + "px")
+	     						.style("top", (d3.event.pageY + 18) + "px")
+	     						.text(d.country)
+
+		   				})
+		   				.on("mouseout", function(d) {
+		   					// hide tooltip
+		   					tooltip.transition().delay(200)
+		   							.style("opacity", 0)
+		   				})
+
+		   		var link = svg.append("g")
+		   						.attr("class", "links")
+		   						.selectAll("line")
+		   						.data(links)
+		   						.enter().append("line")
+		   						.attr("stroke", "white")
+
+		   		force.on("tick", function() {
+
+		   			link.attr("x1", d => d.source.x)
+		   				.attr("y1", d => d.source.y)
+		   				.attr("x2", d => d.target.x)
+		   				.attr("y2", d => d.target.y)
+
+		   			node.style("top", d => `${d.y - 8}px`)
+		   				.style("left", d => `${d.x - 5.5}px`)
+		   		})
+
+		   		function dragstarted(d) {
+					if (!d3.event.active) force.alphaTarget(0.3).restart();
+					d.fx = d.x;
+					d.fy = d.y;
+				}
+
+				function dragged(d) {
+					d.fx = d3.event.x;
+					d.fy = d3.event.y;
+				}
+
+				function dragended(d) {
+					if (!d3.event.active) force.alphaTarget(0);
+					d.fx = null;
+					d.fy = null;
+				} 
+			})
+	})
+</script>
+</body>
+</html>
