@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Data on Globe with D3</title>
+
+	<style type="text/css">
+
+		.container {
+			width: 1200px;
+			margin: 10px auto;
+			padding: 0px;
+		}
+
+		#chart {
+			background: steelblue;
+		}
+
+		h3 {
+			text-align: center;
+			color: white;
+		}
+
+		#tooltip {
+			position: absolute;
+			background: white;
+			border: 1px solid grey;
+			color : steelblue;
+			opacity: 0;
+			padding: 10px;
+			text-align: center;
+			border-radius: 5px;
+		}
+
+		text {fill: black}
+	</style>
+</head>
+<body>
+
+<div class='container'>
+	<h3>Data plot on global map</h3>
+	<svg id='chart'> </svg>
+	<div id="tooltip">
+	</div>
+</div>
+
+<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script type="text/javascript">
+
+		var data_url = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/meteorite-strike-data.json';
+		var map_url = "https://unpkg.com/world-atlas@1/world/110m.json"
+
+		var margin = {top : 0, bottom: 0, right: 0, left: 0},
+			   width = 1200 - margin.left - margin.right,
+			   height = 800 - margin.top - margin.bottom;
+			   
+	    var vis = d3.select("#chart")
+	      	.attr("width", width + margin.left + margin.right)
+	      	.attr("height", height + margin.top + margin.bottom)
+	      .append("g")
+	      	.attr("class", "map")
+
+	    var projection = d3.geoMercator()
+                   .scale(150)
+                  .translate( [width / 2, height / 1.5]);
+
+		var path = d3.geoPath().projection(projection);
+
+	    d3.queue()
+		    .defer(d3.json, data_url)
+		    .defer(d3.json, map_url)
+		    .await(ready);
+
+		function ready(error, data, counry_data) {
+			console.log('data',data)
+
+			vis.selectAll("path")
+		      .data(topojson.feature(counry_data, counry_data.objects.countries).features) // Bind TopoJSON data elements
+		    .enter().append("path")
+		      .attr("d", path)
+		      .style("fill", "white")
+		      .style("stroke", "black");
+		}
+</script>
+</body>
+</html>
