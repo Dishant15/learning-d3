@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Data on Globe with D3</title>
+	<title>Meteorite impact data</title>
 
 	<style type="text/css">
+		body {
+			background: #2b303b;
+		}
 
 		.container {
 			width: 1500px;
-			margin: 10px auto;
+			margin: 80px auto;
 			padding: 0px;
 		}
 
@@ -17,27 +20,29 @@
 
 		h3 {
 			text-align: center;
-			color: white;
+			color: steelblue;
 		}
 
 		circle {
 			stroke: grey;
-			fill: red;
-			opacity: 0.5;
+			opacity: 0.8;
+			cursor: pointer;
 		}
 
 		#tooltip {
 			position: absolute;
-			background: white;
+			background: black;
 			border: 1px solid grey;
-			color : steelblue;
+			color : white;
 			opacity: 0;
 			padding: 10px;
-			text-align: center;
-			border-radius: 5px;
+			text-align: left;
+			border-radius: 2px;
 		}
 
-		text {fill: black}
+		#tooltip>span {
+			font-weight: bold;
+		}
 	</style>
 </head>
 <body>
@@ -46,6 +51,13 @@
 	<h3>Data plot on global map</h3>
 	<svg id='chart'> </svg>
 	<div id="tooltip">
+		Fall : <span id="fall"></span></br>
+		Name : <span id="name"></span></br>
+		Mass : <span id="mass"></span></br>
+		Name Type: <span id="nametype"></span></br>
+		Recclas : <span id="recclas"></span></br>
+		Reclat : <span id="reclat"></span></br>
+		Year : <span id="year"></span></br>
 	</div>
 </div>
 
@@ -53,51 +65,102 @@
 <script src="http://d3js.org/topojson.v1.min.js"></script>
 <script type="text/javascript">
 
-		var data_url = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/meteorite-strike-data.json';
-		var map_url = "https://unpkg.com/world-atlas@1/world/110m.json"
+	var data_url = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/meteorite-strike-data.json';
+	var map_url = "https://unpkg.com/world-atlas@1/world/110m.json"
 
-		var margin = {top : 0, bottom: 0, right: 0, left: 0},
-			   width = 1500 - margin.left - margin.right,
-			   height = 1000 - margin.top - margin.bottom;
-			   
-	    var vis = d3.select("#chart")
-	      	.attr("width", width + margin.left + margin.right)
-	      	.attr("height", height + margin.top + margin.bottom)
-	      .append("g")
+	// tooltip assignment
+	let tooltip = d3.select("#tooltip")
+	let fall = d3.select("#fall")
+	let name = d3.select("#name")
+	let nametype = d3.select("#nametype")
+	let mass = d3.select("#mass")
+	let recclas = d3.select("#recclas")
+	let reclat = d3.select("#reclat")
+	let year = d3.select("#year")
 
-	    var projection = d3.geoMercator()
-                   .scale(200)
-                  .translate( [width / 2, height / 1.65]);
+	var margin = {top : 0, bottom: 0, right: 0, left: 0},
+		   width = 1500 - margin.left - margin.right,
+		   height = 1000 - margin.top - margin.bottom;
+		   
+    var vis = d3.select("#chart")
+      	.attr("width", width + margin.left + margin.right)
+      	.attr("height", height + margin.top + margin.bottom)
+      .append("g")
 
-		var path = d3.geoPath().projection(projection);
+    var projection = d3.geoMercator()
+               .scale(200)
+              .translate( [width / 2, height / 1.65]);
 
-		var scale = d3.scaleLinear().range([2, 25])
+	var path = d3.geoPath().projection(projection);
 
-	    d3.queue()
-		    .defer(d3.json, data_url)
-		    .defer(d3.json, map_url)
-		    .await(ready);
 
-		function ready(error, data, counry_data) {
-			// console.log('data',d3.min(data.features, d => Number(d.properties.mass)))
+	function scale(d) {
+		let mass = Number(d.properties.mass)
+		let range = 718750/4
 
-			scale.domain( [d3.min(data.features, d => Number(d.properties.mass)), d3.max(data.features, d => Number(d.properties.mass))] )
+		if (mass <= range) return 3;
+        else if (mass <= range*2) return 10;
+        else if (mass <= range*3) return 20;
+        else if (mass <= range*20) return 30;
+        else if (mass <= range*100) return 40;
+        return 50;
+	}
 
-			vis.append("g").attr("class", "map").selectAll("path")
-		      .data(topojson.feature(counry_data, counry_data.objects.countries).features) // Bind TopoJSON data elements
-		    .enter().append("path")
-		      .attr("d", path)
-		      .style("fill", "white")
-		      .style("stroke", "black")
+    d3.queue()
+	    .defer(d3.json, data_url)
+	    .defer(d3.json, map_url)
+	    .await(ready);
 
-		   	// add meteorite circles on the map
-		    vis.append("g").attr("class", "data").selectAll("circle")
-		    	.data(data.features)
-		   	.enter().append("circle")
-		   		.attr("r", d => scale(Number(d.properties.mass)))
-		   		.attr("cx", d =>  d.geometry ? projection(d.geometry.coordinates)[0] : -1000 )
-		   		.attr("cy", d => d.geometry ? projection(d.geometry.coordinates)[1] : -1000 )
-		}
+	function ready(error, data, counry_data) {
+
+		// color scale for years
+		var color_scale = d3.scaleLinear()
+							.domain([d3.min(data.features, d => new Date(d.properties.year).getFullYear()), d3.max(data.features, d => new Date(d.properties.year).getFullYear())])
+							// .range(["#007AFF", '#FFF500'])
+							.range(['purple', 'orange'])
+							.interpolate(d3.interpolateHclLong)
+
+		vis.append("g").attr("class", "map").selectAll("path")
+	      .data(topojson.feature(counry_data, counry_data.objects.countries).features) // Bind TopoJSON data elements
+	    .enter().append("path")
+	      .attr("d", path)
+	      .style("fill", "white")
+	      .style("stroke", "black")
+
+	   	// add meteorite circles on the map
+	    vis.append("g").attr("class", "data").selectAll("circle")
+	    	.data(data.features)
+	   	.enter().append("circle")
+	   		.attr("r", scale)
+	   		.attr("cx", d =>  d.geometry ? projection(d.geometry.coordinates)[0] : -1000 )
+	   		.attr("cy", d => d.geometry ? projection(d.geometry.coordinates)[1] : -1000 )
+	   		.attr("fill", d => color_scale(new Date(d.properties.year).getFullYear()))
+	   		.on("mouseover", function(d) {
+	   			d3.select(this)
+	   				.transition().delay(100)
+	   				.style("fill", "black")
+
+	   			tooltip.style("opacity", 0.8)
+
+	   			tooltip.style("left", (d3.event.pageX + 10) + "px")
+     						.style("top", (d3.event.pageY + 18) + "px")
+
+	   			fall.text(d.properties.fall)
+	   			name.text(d.properties.name)
+	   			nametype.text(d.properties.nametype)
+	   			mass.text(d.properties.mass)
+	   			recclas.text(d.properties.recclass)
+	   			reclat.text(d.properties.reclat)
+	   			year.text(d.properties.year)
+	   		})
+	   		.on("mouseout", function(d) {
+	   			d3.select(this)
+	   				.transition().delay(100)
+	   				.style("fill", d => color_scale(new Date(d.properties.year).getFullYear()))
+
+	   			tooltip.style("opacity", 0)
+	   		})
+	}
 </script>
 </body>
 </html>
